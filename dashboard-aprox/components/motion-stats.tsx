@@ -14,6 +14,7 @@ interface MotionStatsProps {
 }
 
 export function MotionStats({ data }: MotionStatsProps) {
+  console.log(data)
   const totalDetections = data.total;
 
 

@@ -95,36 +95,51 @@ def obtener_movimiento(id):
 
 @app.route('/api/estadisticas', methods=['GET'])
 def obtener_estadisticas():
+    # Helper function to safely fetch the count result (returns 0 if result is None)
+    def safe_fetch_count(cursor, key):
+        result = cursor.fetchone()
+        # Si el resultado es válido (no None) y contiene la clave, devuelve el valor.
+        # Si es None o no tiene la clave, devuelve 0.
+        return result[key] if result and key in result else 0
+
     try:
         with get_db_connection() as connection:
             with connection.cursor() as cursor:
+                # 1. TOTAL DE MOVIMIENTOS
                 cursor.execute("SELECT COUNT(*) as total FROM movimientos")
-                total = cursor.fetchone()['total']
+                total = safe_fetch_count(cursor, 'total')
 
+                # 2. MOVIMIENTOS HOY
                 cursor.execute(
                     "SELECT COUNT(*) as hoy FROM movimientos WHERE DATE(fecha_hora) = CURDATE()")
-                hoy = cursor.fetchone()['hoy']
+                hoy = safe_fetch_count(cursor, 'hoy')
 
+                # 3. MOVIMIENTOS ESTA SEMANA
                 cursor.execute(
                     "SELECT COUNT(*) as semana FROM movimientos WHERE YEARWEEK(fecha_hora, 1) = YEARWEEK(CURDATE(), 1)")
-                semana = cursor.fetchone()['semana']
+                semana = safe_fetch_count(cursor, 'semana')
 
+                # 4. ÚLTIMO MOVIMIENTO (Manejo especial, ya que puede ser una fecha)
                 cursor.execute(
                     "SELECT fecha_hora FROM movimientos ORDER BY fecha_hora DESC LIMIT 1")
                 ultimo = cursor.fetchone()
 
+        # Estructurar la respuesta
         return jsonify({
             'success': True,
             'data': {
                 'total': total,
                 'hoy': hoy,
                 'semana': semana,
+                # Usa 'fecha_hora' si 'ultimo' no es None, si no, usa None.
                 'ultimo_movimiento': ultimo['fecha_hora'] if ultimo else None
             }
         }), 200
 
     except Exception as e:
-        return jsonify({'success': False, 'message': f'Error al obtener estadísticas: {str(e)}'}), 500
+        # En caso de que falle la conexión a la DB, asegúrate de devolver JSON y no HTML
+        print(f"Error en obtener_estadisticas: {e}")
+        return jsonify({'success': False, 'message': 'Error interno del servidor al obtener estadísticas.'}), 500
 
 
 @app.route('/api/health', methods=['GET'])
