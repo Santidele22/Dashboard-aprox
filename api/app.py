@@ -1,36 +1,14 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import pymysql
-from dotenv import load_dotenv
-import os
-
-load_dotenv()  # Carga variables de .env
+from db.dbConnection import get_db_connection
 
 app = Flask(__name__)
 CORS(app)
 
-# Configuración de MySQL usando variables de entorno con valores por defecto
-DB_CONNECTION = {
-    "DB_HOST": os.getenv("DB_HOST", "localhost"),
-    "DB_USER": os.getenv("DB_USER", "root"),
-    "DB_PASSWORD": os.getenv("DB_PASSWORD", ""),
-    "DB_NAME": os.getenv("DB_NAME", "")
-}
-
-
-def get_db_connection():
-    return pymysql.connect(
-        host=DB_CONNECTION["DB_HOST"],
-        user=DB_CONNECTION["DB_USER"],
-        password=DB_CONNECTION["DB_PASSWORD"],
-        database=DB_CONNECTION["DB_NAME"],
-        cursorclass=pymysql.cursors.DictCursor
-    )
 
 # --------------------
 # Endpoints
 # --------------------
-
 
 @app.route('/api/movimiento', methods=['POST'])
 def registrar_movimiento():
@@ -163,4 +141,11 @@ def health_check():
 # Run app
 # --------------------
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    try:
+        connection = get_db_connection()
+        print("¡Conexión exitosa a la base de datos!")
+    except Exception as e:
+        print(f"Error de conexión: {e}")
+
+    # 🚀 Iniciar el servidor Flask
+    app.run(host='0.0.0.0', port=5000, debug=True)
